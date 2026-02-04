@@ -1,67 +1,251 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getSignMeaning, SignMeaning } from '@/lib/signMeanings'
+import { findMatchingCombinations, getCombinationLean, SignCombination } from '@/lib/signCombinations'
+import { analyzeQuestion, getQuestionGuidance, QuestionAnalysis } from '@/lib/questionAnalysis'
+
+interface SignAnalysis {
+  sign: string
+  meaning: SignMeaning
+  relevantContext: string
+}
+
+function buildSignAnalyses(signs: string[], questionAnalysis: QuestionAnalysis): SignAnalysis[] {
+  return signs.map(sign => {
+    const meaning = getSignMeaning(sign)
+    
+    // Select the most relevant context based on question domain
+    let relevantContext = meaning.core
+    switch (questionAnalysis.domain) {
+      case 'relationship':
+        relevantContext = meaning.relationshipContext
+        break
+      case 'career':
+        relevantContext = meaning.careerContext
+        break
+      case 'spiritual':
+        relevantContext = meaning.spiritualContext
+        break
+      default:
+        relevantContext = meaning.emotionalContext
+    }
+    
+    return { sign, meaning, relevantContext }
+  })
+}
+
+function buildInterpretationContext(
+  signs: string[],
+  questionAnalysis: QuestionAnalysis,
+  signAnalyses: SignAnalysis[],
+  combinations: SignCombination[],
+  combinationLean: { lean: string; confidence: number }
+): string {
+  let context = `
+=== THEORAKL INTERPRETATION ENGINE ===
+
+QUESTION ANALYSIS:
+- Type: ${questionAnalysis.type}
+- Domain: ${questionAnalysis.domain}
+- Urgency: ${questionAnalysis.urgency}
+- Emotional State: ${questionAnalysis.sentiment}
+- Wants Permission: ${questionAnalysis.wantsPermission}
+- Wants Validation: ${questionAnalysis.wantsValidation}
+- Seeking Warning: ${questionAnalysis.wantsWarning}
+
+${getQuestionGuidance(questionAnalysis)}
+
+=== SIGN-BY-SIGN INTERPRETATION ===
+`
+
+  for (let i = 0; i < signAnalyses.length; i++) {
+    const { sign, meaning, relevantContext } = signAnalyses[i]
+    context += `
+SIGN ${i + 1}: "${sign}"
+Core Meaning: ${meaning.core}
+Domain-Specific (${questionAnalysis.domain}): ${relevantContext}
+Yes Energy: ${meaning.yesEnergy}
+No Energy: ${meaning.noEnergy}
+Wait Energy: ${meaning.waitEnergy}
+Warnings: ${meaning.warnings.join('; ')}
+Amplified by: ${meaning.amplifiers.join(', ')}
+Contradicted by: ${meaning.contradictors.join(', ')}
+---`
+  }
+
+  if (combinations.length > 0) {
+    context += `
+
+=== SPECIAL SIGN COMBINATIONS DETECTED ===
+`
+    for (const combo of combinations) {
+      context += `
+★ ${combo.name} (Power Level: ${combo.power_level}/5)
+Triggers: ${combo.signs.join(' + ')}
+Meaning: ${combo.meaning}
+Verdict Lean: ${combo.verdict_lean.toUpperCase()}
+---`
+    }
+
+    context += `
+
+COMBINATION ANALYSIS:
+Overall Lean: ${combinationLean.lean.toUpperCase()}
+Confidence: ${combinationLean.confidence}%
+`
+  }
+
+  // Add cross-sign analysis
+  context += `
+
+=== CROSS-SIGN ANALYSIS ===
+`
+  
+  // Check for amplifications
+  for (const analysis of signAnalyses) {
+    for (const amplifier of analysis.meaning.amplifiers) {
+      if (signs.some(s => s.toLowerCase().includes(amplifier.toLowerCase().split(' ')[0]))) {
+        context += `AMPLIFICATION: "${analysis.sign}" is STRENGTHENED by the presence of "${amplifier}" energy in their signs.\n`
+      }
+    }
+  }
+  
+  // Check for contradictions
+  for (const analysis of signAnalyses) {
+    for (const contradictor of analysis.meaning.contradictors) {
+      if (signs.some(s => s.toLowerCase().includes(contradictor.toLowerCase().split(' ')[0]))) {
+        context += `TENSION: "${analysis.sign}" is in TENSION with "${contradictor}" energy. Address this contradiction in your reading.\n`
+      }
+    }
+  }
+
+  // Count sign types for pattern analysis
+  const numberSigns = signs.filter(s => s.toLowerCase().includes('number') || s.match(/\d{3}/)).length
+  const animalSigns = signs.filter(s => s.toLowerCase().includes('animal') || s.toLowerCase().includes('bird') || s.toLowerCase().includes('butterfly')).length
+  const bodySigns = signs.filter(s => s.toLowerCase().includes('gut') || s.toLowerCase().includes('chill') || s.toLowerCase().includes('feeling')).length
+  const dreamSigns = signs.filter(s => s.toLowerCase().includes('dream')).length
+  
+  context += `
+
+=== PATTERN ANALYSIS ===
+Number/Angel Signs: ${numberSigns}
+Animal/Nature Signs: ${animalSigns}
+Body/Intuition Signs: ${bodySigns}
+Dream Signs: ${dreamSigns}
+
+`
+
+  if (numberSigns >= 2) {
+    context += `PATTERN NOTE: Multiple number signs suggest the universe is communicating through mathematics and divine timing. Pay special attention to the specific numbers.\n`
+  }
+  if (bodySigns >= 2) {
+    context += `PATTERN NOTE: Multiple body signs indicate the person's physical intuition is highly active. Their body KNOWS the answer—help them trust it.\n`
+  }
+  if (animalSigns >= 2) {
+    context += `PATTERN NOTE: Multiple animal signs suggest spirit guides are communicating through the natural world. This person has a connection to animal medicine.\n`
+  }
+  if (dreamSigns >= 2) {
+    context += `PATTERN NOTE: Multiple dream signs indicate the person's subconscious/spiritual channel is wide open. Their dreams are prophetic right now.\n`
+  }
+
+  return context
+}
 
 export async function POST(request: NextRequest) {
   try {
     const { question, signs, pathType, isDeepReading, dayCount } = await request.json()
 
-    const signsList = signs.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n')
+    // Analyze the question
+    const questionAnalysis = analyzeQuestion(question)
+    
+    // Get sign interpretations
+    const signAnalyses = buildSignAnalyses(signs, questionAnalysis)
+    
+    // Find special combinations
+    const combinations = findMatchingCombinations(signs)
+    const combinationLean = getCombinationLean(combinations)
+    
+    // Build the interpretation context
+    const interpretationContext = buildInterpretationContext(
+      signs,
+      questionAnalysis,
+      signAnalyses,
+      combinations,
+      combinationLean
+    )
+
     const signCount = signs.length
 
-    const quickReadingPrompt = `You are a mystical oracle who interprets signs from the universe. Someone has asked you a question and logged ${signCount} signs they noticed. Your job is to weave these signs into a coherent reading that answers their question.
+    const quickReadingPrompt = `You are THEORAKL, a mystical oracle with a proprietary system for interpreting signs from the universe. You have access to our interpretation engine which has analyzed this person's question and signs in depth.
 
-CRITICAL INSTRUCTIONS:
-1. You MUST reference EVERY SINGLE SIGN they logged - do not skip any
-2. Connect the signs to each other - find patterns, themes, and relationships between them
-3. Relate each sign back to their specific question
-4. Build toward a CLEAR ANSWER - either YES, NO, WAIT, or a specific direction
-5. Explain the REASONING - why do these signs point to this conclusion?
-6. Be specific and personal - avoid generic spiritual platitudes
+${interpretationContext}
 
-STRUCTURE YOUR READING:
-- Opening: Acknowledge their question and the energy you sense
-- Body (2-3 paragraphs): Go through their signs, weaving them together into a narrative. Show how Sign A connects to Sign B, how together they suggest X, etc.
-- Conclusion: State your clear interpretation and WHY the signs point this direction
-- The verdict should be actionable: "Yes, move forward" or "No, this isn't the right path" or "Wait for more clarity"
+=== YOUR TASK ===
+
+Using the interpretation data above, create a reading that:
+
+1. WEAVES every sign together into a coherent narrative (reference ALL ${signCount} signs by name)
+2. Uses the DOMAIN-SPECIFIC interpretations provided (this is a ${questionAnalysis.domain} question)
+3. Addresses any SPECIAL COMBINATIONS detected with their specific meanings
+4. Resolves any TENSIONS between contradicting signs (if found)
+5. Speaks to their PSYCHOLOGICAL NEEDS (permission: ${questionAnalysis.wantsPermission}, validation: ${questionAnalysis.wantsValidation}, warning: ${questionAnalysis.wantsWarning})
+6. Builds to a CLEAR VERDICT that matches the overall lean (${combinationLean.lean}, ${combinationLean.confidence}% confidence)
+
+STYLE GUIDELINES:
+- Speak with mystical authority but warmth
+- Be SPECIFIC—reference their exact signs, not generic spirituality
+- Connect signs to each other: "The butterfly you saw COMBINED with the 444..."
+- Build logical bridges: "This is significant because..."
+- End with actionable clarity
 
 Their question: "${question}"
 
-Signs they noticed (reference ALL of these):
-${signsList}
-
-Respond with JSON in this exact format:
+Respond with JSON:
 {
-  "reading": "Your full reading here. Multiple paragraphs. Reference every sign. Build logical connections. End with clear reasoning for your verdict.",
-  "verdict": "A clear 3-8 word verdict like 'Yes, the path is clear' or 'No, trust your hesitation' or 'Wait for the third sign'"
+  "reading": "Your complete reading. 3-4 paragraphs. Reference every sign. Build connections. Address their psychological needs. End with clear reasoning for verdict.",
+  "verdict": "3-8 word decisive verdict matching the lean: ${combinationLean.lean}"
 }`
 
-    const deepReadingPrompt = `You are a mystical oracle performing a DEEP READING. This person committed to 5 days of tracking signs from the universe to answer their question. They logged ${signCount} total signs across their journey. This reading must be profound, detailed, and conclusive.
+    const deepReadingPrompt = `You are THEORAKL, a mystical oracle with a proprietary system for interpreting signs from the universe. This person committed to a 5-DAY JOURNEY, logging ${signCount} signs total. You have access to our interpretation engine which has analyzed everything in depth.
 
-CRITICAL INSTRUCTIONS:
-1. You MUST reference EVERY SINGLE SIGN they logged across all 5 days - do not skip any
-2. Look for PATTERNS across the days - what themes repeated? What evolved?
-3. Find the CONNECTIONS between signs - how does the butterfly on Day 1 relate to the song on Day 3?
-4. Build a NARRATIVE ARC - show how the universe's message became clearer over time
-5. Arrive at a DEFINITIVE ANSWER with clear reasoning
-6. Explain WHY these specific signs, in this specific combination, point to your conclusion
+${interpretationContext}
 
-STRUCTURE YOUR DEEP READING:
-- Opening: Honor their 5-day commitment. Set the mystical tone.
-- The Journey (2-3 paragraphs): Walk through the signs chronologically or thematically. Show how early signs planted seeds that later signs confirmed. Reference specific signs by name.
-- The Pattern (1-2 paragraphs): Identify the major themes. What kept appearing? Numbers? Animals? Feelings? What does this repetition mean?
-- The Synthesis (1-2 paragraphs): Weave everything together. Show how Sign A + Sign B + Sign C together create a clear message that none would convey alone.
-- The Answer (1 paragraph): State definitively what the universe is telling them. Be bold. They paid for clarity - give it to them.
-- The Why (1 paragraph): Explain your reasoning. "The repeated appearance of X, combined with Y on Day 3, and the unmistakable Z on Day 5, all point to..."
+=== YOUR TASK: DEEP READING ===
+
+This person waited 5 days and logged ${signCount} signs. They paid for this reading. Make it worth it.
+
+Create a reading that:
+
+1. HONORS their 5-day commitment—this is sacred
+2. References EVERY SINGLE SIGN by name, weaving them chronologically or thematically
+3. Uses the DOMAIN-SPECIFIC interpretations (this is a ${questionAnalysis.domain} question)
+4. Highlights ALL SPECIAL COMBINATIONS detected—these are the power moments
+5. Shows how signs BUILT ON EACH OTHER over the 5 days
+6. Addresses TENSIONS between contradicting signs as nuance, not confusion
+7. Speaks to their PSYCHOLOGICAL NEEDS (permission: ${questionAnalysis.wantsPermission}, validation: ${questionAnalysis.wantsValidation}, warning: ${questionAnalysis.wantsWarning})
+8. Delivers a DEFINITIVE verdict with confidence (lean: ${combinationLean.lean}, ${combinationLean.confidence}% confidence)
+
+STRUCTURE:
+- Opening: Honor the journey. Set mystical tone.
+- The Signs (2-3 paragraphs): Walk through each sign, explaining its meaning IN CONTEXT of their question. Show how early signs were seeds that later signs confirmed.
+- The Patterns (1 paragraph): What kept appearing? What does the repetition mean?
+- The Combinations (1 paragraph): Explain any special combinations detected and why they're significant.
+- The Synthesis (1 paragraph): Weave it all together. Show how the TOTALITY creates a clear message.
+- The Answer (1 paragraph): STATE THE VERDICT clearly with reasoning. They waited 5 days—give them certainty.
+
+STYLE:
+- Mystical but precise
+- Reference specific signs constantly
+- Build bridges between signs
+- Create an arc of revelation
+- End with power and clarity
 
 Their question: "${question}"
 
-All signs from their 5-day journey (reference ALL of these):
-${signsList}
-
-Respond with JSON in this exact format:
+Respond with JSON:
 {
-  "reading": "Your complete deep reading. 5-7 paragraphs. Reference every single sign. Show patterns and connections. Build to a clear, reasoned conclusion. This person waited 5 days - make it worth it.",
-  "verdict": "A definitive 3-8 word verdict like 'Yes, leap now with confidence' or 'No, your soul knows better' or 'The answer is already within you'"
+  "reading": "Your complete deep reading. 6-8 paragraphs. Reference every sign. Honor the journey. Build to certain conclusion.",
+  "verdict": "3-8 word definitive verdict matching the lean: ${combinationLean.lean}"
 }`
 
     const prompt = isDeepReading ? deepReadingPrompt : quickReadingPrompt
@@ -76,7 +260,7 @@ Respond with JSON in this exact format:
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
-        max_tokens: isDeepReading ? 3000 : 1500,
+        max_tokens: isDeepReading ? 4000 : 2000,
         messages: [
           {
             role: 'user',
@@ -98,7 +282,6 @@ Respond with JSON in this exact format:
     // Parse the JSON response
     let reading, verdict
     try {
-      // Try to extract JSON from the response
       const jsonMatch = content.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0])
@@ -108,13 +291,15 @@ Respond with JSON in this exact format:
         throw new Error('No JSON found')
       }
     } catch {
-      // If JSON parsing fails, use the raw content
       console.error('Failed to parse JSON, using raw content')
       reading = content
-      verdict = "The universe has spoken"
+      verdict = combinationLean.lean === 'yes' ? 'The signs point yes' : 
+                combinationLean.lean === 'no' ? 'The signs urge caution' :
+                combinationLean.lean === 'wait' ? 'Wait for more clarity' :
+                'The universe has spoken'
     }
 
-    // Save to Supabase
+    // Save to Supabase with additional analysis data
     const { data: savedReading, error: dbError } = await supabase
       .from('readings')
       .insert({
@@ -122,19 +307,33 @@ Respond with JSON in this exact format:
         signs,
         reading_text: reading,
         verdict,
-        path_type: pathType
+        path_type: pathType,
+        question_type: questionAnalysis.type,
+        question_domain: questionAnalysis.domain,
+        combination_count: combinations.length,
+        verdict_lean: combinationLean.lean,
+        confidence_score: combinationLean.confidence
       })
       .select()
       .single()
 
     if (dbError) {
       console.error('Database error:', dbError)
+      // Don't fail the request if DB save fails
     }
 
     return NextResponse.json({
       reading,
       verdict,
-      id: savedReading?.id
+      id: savedReading?.id,
+      // Include analysis for potential future use
+      analysis: {
+        questionType: questionAnalysis.type,
+        domain: questionAnalysis.domain,
+        combinationsFound: combinations.length,
+        verdictLean: combinationLean.lean,
+        confidence: combinationLean.confidence
+      }
     })
 
   } catch (error) {
