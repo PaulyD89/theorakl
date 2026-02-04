@@ -293,6 +293,20 @@ function TheoraklApp() {
   const [userEmail, setUserEmail] = useState('')
   const [journeyId, setJourneyId] = useState<string | null>(null)
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [loadingMessage, setLoadingMessage] = useState('The universe is speaking...')
+
+  const loadingMessages = [
+    'The universe is speaking...',
+    'Reading the signs...',
+    'Consulting the stars...',
+    'The pattern is emerging...',
+    'Weaving your answer...',
+    'Listening to the cosmos...',
+    'Decoding the synchronicities...',
+    'The veil is thinning...',
+    'Your message is forming...',
+    'Aligning the energies...'
+  ]
 
   // Check for payment return and load saved journey
   useEffect(() => {
@@ -423,6 +437,13 @@ function TheoraklApp() {
     setIsLoading(true)
     setError(null)
     showScreen('loading')
+    
+    // Start rotating loading messages
+    let messageIndex = 0
+    const messageInterval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % loadingMessages.length
+      setLoadingMessage(loadingMessages[messageIndex])
+    }, 2500)
 
     const allSigns = Object.values(journey.dailySigns).flat()
 
@@ -448,10 +469,12 @@ function TheoraklApp() {
       localStorage.setItem('theorakl_deep_journey', JSON.stringify(completedJourney))
       setDeepJourney(completedJourney)
 
+      clearInterval(messageInterval)
       showScreen('reading')
     } catch (err) {
       console.error('Error:', err)
       setError('Something went wrong. Please try again.')
+      clearInterval(messageInterval)
       showScreen('signs')
     } finally {
       setIsLoading(false)
@@ -472,6 +495,13 @@ function TheoraklApp() {
     setIsLoading(true)
     setError(null)
     showScreen('loading')
+    
+    // Start rotating loading messages
+    let messageIndex = 0
+    const messageInterval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % loadingMessages.length
+      setLoadingMessage(loadingMessages[messageIndex])
+    }, 2500)
 
     try {
       const response = await fetch('/api/reading', {
@@ -488,10 +518,12 @@ function TheoraklApp() {
 
       const data = await response.json()
       setReading({ text: data.reading, verdict: data.verdict })
+      clearInterval(messageInterval)
       showScreen('reading')
     } catch (err) {
       console.error('Error:', err)
       setError('Something went wrong. Please try again.')
+      clearInterval(messageInterval)
       showScreen('signs')
     } finally {
       setIsLoading(false)
@@ -789,10 +821,22 @@ Get your own reading at theorakl.com`
             <span className="divider-line"></span>
           </div>
 
-          <p className="intro-text">
-            The universe sends signs every day.<br />
-            Learn to see them. Let them guide you.
-          </p>
+          <div className="hero-text">
+            <p className="hero-main">
+              You&apos;ve been seeing them.
+            </p>
+            <p className="hero-sub">
+              The repeating numbers. The songs that play at the exact right moment. 
+              The stranger who says what you needed to hear. The feeling in your gut 
+              that won&apos;t go away.
+            </p>
+            <p className="hero-sub">
+              These aren&apos;t coincidences. <span className="text-gold">The universe is trying to tell you something.</span>
+            </p>
+            <p className="hero-sub">
+              Ask your question. Log the signs. Receive your answer.
+            </p>
+          </div>
 
           {deepJourney && !deepJourney.completed && (
             <div className="card" style={{ marginBottom: '20px', borderColor: 'var(--accent-gold)' }}>
@@ -813,7 +857,7 @@ Get your own reading at theorakl.com`
           )}
 
           <button className="btn btn-primary" onClick={() => showScreen('question')}>
-            {deepJourney && !deepJourney.completed ? 'Start New Reading' : 'Begin Your Reading'}
+            {deepJourney && !deepJourney.completed ? 'Start New Reading' : 'Ask the Universe'}
           </button>
 
           <button className="btn btn-secondary mt-20" onClick={() => showScreen('about')}>
@@ -1206,7 +1250,7 @@ Is now the right time to..."
         <div className={`screen ${currentScreen === 'loading' ? 'active' : ''}`}>
           <div className="loading">
             <div className="loading-orb"></div>
-            <p className="loading-text">The universe is speaking...</p>
+            <p className="loading-text">{loadingMessage}</p>
           </div>
         </div>
 
