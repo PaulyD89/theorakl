@@ -97,7 +97,7 @@ const signCategories = [
   }
 ]
 
-const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZu3cv0Dq45yg6i7Jiew800'
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/00wdR9cm8atWbQ2d3Cew802'
 
 type Screen = 'home' | 'question' | 'path' | 'signs' | 'loading' | 'reading' | 'about' | 'deep-journey'
 type PathType = 'quick' | 'deep' | null
