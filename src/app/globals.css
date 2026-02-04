@@ -992,3 +992,74 @@ html {
   background: rgba(201, 165, 92, 0.3);
   color: var(--text-primary);
 }
+
+/* Share section */
+.share-section {
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 1px solid var(--border-subtle);
+  opacity: 0;
+  animation: fadeInUp 0.6s var(--ease-out-expo) 1.2s forwards;
+}
+
+.share-label {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.share-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.share-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 24px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s var(--ease-smooth);
+  min-width: 80px;
+}
+
+.share-btn:hover {
+  border-color: var(--accent-gold);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.share-btn:active {
+  transform: translateY(0);
+}
+
+.share-icon {
+  font-size: 24px;
+}
+
+.share-btn span:last-child {
+  font-size: 11px;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+}
+
+.share-btn:hover span:last-child {
+  color: var(--text-primary);
+}
+
+.copy-success {
+  text-align: center;
+  color: var(--accent-gold);
+  font-size: 13px;
+  margin-top: 12px;
+  animation: fadeInUp 0.3s var(--ease-bounce);
+}

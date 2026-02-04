@@ -289,6 +289,7 @@ function TheoraklApp() {
   const [error, setError] = useState<string | null>(null)
   const [deepJourney, setDeepJourney] = useState<DeepJourneyData | null>(null)
   const [hasPaid, setHasPaid] = useState(false)
+  const [copySuccess, setCopySuccess] = useState(false)
 
   // Check for payment return and load saved journey
   useEffect(() => {
@@ -533,6 +534,66 @@ function TheoraklApp() {
     return text.split('\n\n').map((paragraph, i) => (
       <p key={i}>{paragraph}</p>
     ))
+  }
+
+  const getReadingText = () => {
+    const signs = selectedPath === 'deep' && deepJourney 
+      ? Object.values(deepJourney.dailySigns).flat()
+      : selectedSigns
+    
+    return `✨ MY THEORAKL READING ✨
+
+Question: "${userQuestion}"
+
+Signs I noticed:
+${signs.map(s => `• ${s}`).join('\n')}
+
+---
+
+${reading.text}
+
+---
+
+THE UNIVERSE SAYS: ${reading.verdict}
+
+---
+Get your own reading at theorakl.com`
+  }
+
+  const copyReading = async () => {
+    try {
+      await navigator.clipboard.writeText(getReadingText())
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  const shareReading = async () => {
+    const text = getReadingText()
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'My Theorakl Reading',
+          text: text,
+          url: 'https://theorakl.com'
+        })
+      } catch (err) {
+        // User cancelled or share failed, fall back to copy
+        copyReading()
+      }
+    } else {
+      // Fallback for desktop - just copy
+      copyReading()
+    }
+  }
+
+  const emailReading = () => {
+    const subject = encodeURIComponent('My Theorakl Reading')
+    const body = encodeURIComponent(getReadingText())
+    window.location.href = `mailto:?subject=${subject}&body=${body}`
   }
 
   const getTotalSignsLogged = () => {
@@ -952,6 +1013,28 @@ Is now the right time to..."
               <p className="verdict-label">The Universe Says</p>
               <p className="verdict-text">{reading.verdict}</p>
             </div>
+          </div>
+
+          {/* Share Options */}
+          <div className="share-section">
+            <p className="share-label">Save Your Reading</p>
+            <div className="share-buttons">
+              <button className="share-btn" onClick={() => copyReading()}>
+                <span className="share-icon">📋</span>
+                <span>Copy</span>
+              </button>
+              <button className="share-btn" onClick={() => shareReading()}>
+                <span className="share-icon">📤</span>
+                <span>Share</span>
+              </button>
+              <button className="share-btn" onClick={() => emailReading()}>
+                <span className="share-icon">✉️</span>
+                <span>Email</span>
+              </button>
+            </div>
+            {copySuccess && (
+              <p className="copy-success">✓ Copied to clipboard</p>
+            )}
           </div>
 
           <button className="btn btn-secondary mt-30" onClick={startNewJourney}>
