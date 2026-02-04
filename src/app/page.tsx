@@ -264,7 +264,7 @@ const premiumSignCategories = [
 
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/00wdR9cm8atWbQ2d3Cew802'
 
-type Screen = 'home' | 'question' | 'path' | 'signs' | 'loading' | 'reading' | 'about' | 'deep-journey'
+type Screen = 'home' | 'question' | 'path' | 'email-capture' | 'signs' | 'loading' | 'reading' | 'about' | 'deep-journey'
 type PathType = 'quick' | 'deep' | null
 
 interface DeepJourneyData {
@@ -290,6 +290,9 @@ function TheoraklApp() {
   const [deepJourney, setDeepJourney] = useState<DeepJourneyData | null>(null)
   const [hasPaid, setHasPaid] = useState(false)
   const [copySuccess, setCopySuccess] = useState(false)
+  const [userEmail, setUserEmail] = useState('')
+  const [journeyId, setJourneyId] = useState<string | null>(null)
+  const [sendingEmail, setSendingEmail] = useState(false)
 
   // Check for payment return and load saved journey
   useEffect(() => {
@@ -297,20 +300,13 @@ function TheoraklApp() {
     const savedQuestion = localStorage.getItem('theorakl_pending_question')
     
     if (paid === 'true' && savedQuestion) {
-      const newJourney: DeepJourneyData = {
-        question: savedQuestion,
-        startDate: new Date().toISOString(),
-        currentDay: 1,
-        dailySigns: {},
-        completed: false
-      }
-      localStorage.setItem('theorakl_deep_journey', JSON.stringify(newJourney))
-      localStorage.removeItem('theorakl_pending_question')
-      setDeepJourney(newJourney)
+      // They just paid - show email capture screen
       setUserQuestion(savedQuestion)
       setSelectedPath('deep')
       setHasPaid(true)
-      setCurrentScreen('signs')
+      setCurrentScreen('email-capture')
+      
+      // Clean up URL
       window.history.replaceState({}, '', '/')
     } else {
       const savedJourney = localStorage.getItem('theorakl_deep_journey')
@@ -596,6 +592,82 @@ Get your own reading at theorakl.com`
     window.location.href = `mailto:?subject=${subject}&body=${body}`
   }
 
+  const createJourneyAndSendEmail = async () => {
+    if (!userEmail.trim() || !userEmail.includes('@')) {
+      alert('Please enter a valid email address')
+      return
+    }
+
+    setSendingEmail(true)
+
+    try {
+      // Create journey in database
+      const journeyResponse = await fetch('/api/journey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          question: userQuestion
+        })
+      })
+
+      if (!journeyResponse.ok) throw new Error('Failed to create journey')
+      
+      const journey = await journeyResponse.json()
+      setJourneyId(journey.id)
+
+      // Send magic link email
+      const emailResponse = await fetch('/api/send-magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: userEmail,
+          journeyId: journey.id
+        })
+      })
+
+      if (!emailResponse.ok) throw new Error('Failed to send email')
+
+      // Also save locally as backup
+      const newJourney: DeepJourneyData = {
+        question: userQuestion,
+        startDate: new Date().toISOString(),
+        currentDay: 1,
+        dailySigns: {},
+        completed: false
+      }
+      localStorage.setItem('theorakl_deep_journey', JSON.stringify(newJourney))
+      localStorage.setItem('theorakl_journey_id', journey.id)
+      localStorage.removeItem('theorakl_pending_question')
+      
+      setDeepJourney(newJourney)
+      
+      // Redirect to the journey page
+      window.location.href = `/journey/${journey.id}`
+
+    } catch (error) {
+      console.error('Error:', error)
+      alert('Something went wrong. Please try again.')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+
+  const skipEmailAndContinue = () => {
+    // They chose not to enter email - just use localStorage
+    const newJourney: DeepJourneyData = {
+      question: userQuestion,
+      startDate: new Date().toISOString(),
+      currentDay: 1,
+      dailySigns: {},
+      completed: false
+    }
+    localStorage.setItem('theorakl_deep_journey', JSON.stringify(newJourney))
+    localStorage.removeItem('theorakl_pending_question')
+    setDeepJourney(newJourney)
+    showScreen('signs')
+  }
+
   const getTotalSignsLogged = () => {
     if (!deepJourney) return 0
     return Object.values(deepJourney.dailySigns).flat().length
@@ -743,6 +815,72 @@ Is now the right time to..."
           >
             {selectedPath === 'deep' && !hasPaid ? 'Continue to Payment — $2.99' : 'Continue'}
           </button>
+        </div>
+
+        {/* Email Capture Screen */}
+        <div className={`screen ${currentScreen === 'email-capture' ? 'active' : ''}`}>
+          <div className="header">
+            <h1 className="logo">THE<span>O</span>RAKL</h1>
+          </div>
+
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>✨</div>
+            <h2 className="page-title" style={{ marginBottom: '16px' }}>Your Journey Begins</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '30px', lineHeight: '1.6' }}>
+              Enter your email to receive a magic link.<br />
+              Access your 5-day journey from any device.
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Your Email</label>
+            <input 
+              type="email"
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
+              placeholder="you@example.com"
+              style={{
+                width: '100%',
+                padding: '16px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
+                color: 'var(--text-primary)',
+                fontFamily: 'DM Sans, sans-serif',
+                fontSize: '16px',
+                transition: 'all 0.3s ease'
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent-gold)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--border-subtle)'}
+            />
+          </div>
+
+          <button 
+            className="btn btn-primary" 
+            onClick={createJourneyAndSendEmail}
+            disabled={sendingEmail}
+          >
+            {sendingEmail ? 'Sending...' : 'Send Magic Link & Start'}
+          </button>
+
+          <button 
+            className="btn btn-secondary mt-20" 
+            onClick={skipEmailAndContinue}
+            disabled={sendingEmail}
+          >
+            Skip — Continue on this device only
+          </button>
+
+          <p style={{ 
+            color: 'var(--text-dim)', 
+            fontSize: '12px', 
+            textAlign: 'center',
+            marginTop: '20px',
+            lineHeight: '1.6'
+          }}>
+            We&apos;ll only email you about your journey.<br />
+            No spam, ever.
+          </p>
         </div>
 
         {/* Signs Screen */}
