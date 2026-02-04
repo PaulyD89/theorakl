@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
         'Authorization': `Bearer ${process.env.RESEND_API_KEY}`
       },
       body: JSON.stringify({
-        from: 'Theorakl <onboarding@resend.dev>',
+        from: 'TheOrakl <hello@theorakl.com>',
         to: email,
         subject: '✨ Your Theorakl Journey Awaits',
         html: `
