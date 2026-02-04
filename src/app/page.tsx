@@ -108,6 +108,8 @@ export default function Home() {
   const [customSignInput, setCustomSignInput] = useState('')
   const [customSigns, setCustomSigns] = useState<string[]>([])
   const [reading, setReading] = useState({ text: '', verdict: '' })
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   // Generate stars on mount
   useEffect(() => {
@@ -171,48 +173,46 @@ export default function Home() {
     }
   }
 
-  const generateReading = () => {
+  const generateReading = async () => {
     if (selectedSigns.length === 0) {
       alert('Please log at least one sign')
       return
     }
 
+    setIsLoading(true)
+    setError(null)
     showScreen('loading')
 
-    // Simulate AI processing (this will be replaced with real API call)
-    setTimeout(() => {
-      const generatedReading = generateSampleReading(userQuestion, selectedSigns)
-      setReading(generatedReading)
+    try {
+      const response = await fetch('/api/reading', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: userQuestion,
+          signs: selectedSigns,
+          pathType: selectedPath
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate reading')
+      }
+
+      const data = await response.json()
+      
+      setReading({
+        text: data.reading,
+        verdict: data.verdict
+      })
       showScreen('reading')
-    }, 2500)
-  }
-
-  // Sample reading generator (placeholder for AI)
-  const generateSampleReading = (question: string, signs: string[]) => {
-    const text = `
-      <p>The signs you've gathered speak with unusual clarity today. There is a thread running through what you've noticed—a pattern the universe wants you to see.</p>
-      
-      <p>The ${signs[0].toLowerCase()} you experienced is significant. In the language of signs, this often represents a moment of heightened awareness—the universe getting your attention before delivering a message.</p>
-      
-      ${signs.length > 1 ? `<p>Combined with ${signs[1].toLowerCase()}, a picture emerges. These are not coincidences but coordinates on a map only you can read. The universe does not repeat itself without reason.</p>` : ''}
-      
-      <p>Regarding your question about "${question.toLowerCase()}"—the signs suggest movement, transition, a threshold being crossed. There is energy here that favors action over hesitation, though the timing remains yours to choose.</p>
-      
-      <p>Trust what you already know. The fact that you noticed these signs at all means some part of you is already aligned with the answer.</p>
-    `
-
-    const verdicts = [
-      "The path is opening",
-      "Trust your instincts",
-      "Movement is favored",
-      "The answer is yes, but patience",
-      "Wait for one more sign",
-      "You already know"
-    ]
-
-    return {
-      text,
-      verdict: verdicts[Math.floor(Math.random() * verdicts.length)]
+    } catch (err) {
+      console.error('Error:', err)
+      setError('Something went wrong. Please try again.')
+      showScreen('signs')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -224,7 +224,15 @@ export default function Home() {
     setCustomSignInput('')
     setCustomSigns([])
     setReading({ text: '', verdict: '' })
+    setError(null)
     showScreen('home')
+  }
+
+  // Format reading text with paragraphs
+  const formatReading = (text: string) => {
+    return text.split('\n\n').map((paragraph, i) => (
+      <p key={i}>{paragraph}</p>
+    ))
   }
 
   return (
@@ -339,6 +347,20 @@ Is now the right time to..."
           <h2 className="page-title">Log Your Signs</h2>
           <p className="page-subtitle">What has the universe shown you today?</p>
 
+          {error && (
+            <div style={{ 
+              background: 'rgba(255,100,100,0.1)', 
+              border: '1px solid rgba(255,100,100,0.3)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              marginBottom: '20px',
+              color: '#ff6b6b',
+              fontSize: '14px'
+            }}>
+              {error}
+            </div>
+          )}
+
           {/* Selected signs summary */}
           <div className="selected-signs-summary">
             <p className="summary-title">Signs Logged</p>
@@ -445,10 +467,9 @@ Is now the right time to..."
               <span className="divider-line"></span>
             </div>
 
-            <div 
-              className="reading-text" 
-              dangerouslySetInnerHTML={{ __html: reading.text }}
-            />
+            <div className="reading-text">
+              {formatReading(reading.text)}
+            </div>
 
             <div className="reading-verdict">
               <p className="verdict-label">The Universe Says</p>

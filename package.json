@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@supabase/supabase-js": "^2.94.1",
     "@types/node": "^25.2.0",
     "@types/react": "^19.2.11",
     "next": "^16.1.6",
