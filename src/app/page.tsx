@@ -863,6 +863,13 @@ Get your own reading at theorakl.com`
           <button className="btn btn-secondary mt-20" onClick={() => showScreen('about')}>
             How It Works
           </button>
+
+          <button 
+            className="about-link"
+            onClick={() => window.location.href = '/about'}
+          >
+            About & FAQ
+          </button>
         </div>
 
         {/* Question Screen */}
