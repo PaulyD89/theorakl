@@ -1078,13 +1078,21 @@ html {
   justify-content: center;
   margin-top: 12px;
   background: linear-gradient(135deg, rgba(201, 165, 92, 0.1) 0%, rgba(201, 165, 92, 0.05) 100%);
-  border: 1px solid var(--accent-gold);
+  border: 2px solid var(--accent-gold);
+  border-radius: 12px;
   color: var(--accent-gold);
+  box-shadow: 0 0 20px rgba(201, 165, 92, 0.3), 0 0 40px rgba(201, 165, 92, 0.15), inset 0 0 20px rgba(201, 165, 92, 0.05);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(201, 165, 92, 0.3), 0 0 40px rgba(201, 165, 92, 0.15), inset 0 0 20px rgba(201, 165, 92, 0.05); }
+  50% { box-shadow: 0 0 30px rgba(201, 165, 92, 0.5), 0 0 60px rgba(201, 165, 92, 0.25), inset 0 0 30px rgba(201, 165, 92, 0.1); }
 }
 
 .share-card-btn:hover {
   background: linear-gradient(135deg, rgba(201, 165, 92, 0.2) 0%, rgba(201, 165, 92, 0.1) 100%);
-  box-shadow: 0 0 30px rgba(201, 165, 92, 0.2);
+  box-shadow: 0 0 40px rgba(201, 165, 92, 0.5), 0 0 80px rgba(201, 165, 92, 0.3), inset 0 0 30px rgba(201, 165, 92, 0.1);
 }
 
 .share-card-hint {
