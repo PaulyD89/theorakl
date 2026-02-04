@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 
 // Sign categories data
 const signCategories = [
@@ -96,10 +97,21 @@ const signCategories = [
   }
 ]
 
-type Screen = 'home' | 'question' | 'path' | 'signs' | 'loading' | 'reading' | 'about'
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/fZu3cv0Dq45yg6i7Jiew800'
+
+type Screen = 'home' | 'question' | 'path' | 'signs' | 'loading' | 'reading' | 'about' | 'deep-journey'
 type PathType = 'quick' | 'deep' | null
 
+interface DeepJourneyData {
+  question: string
+  startDate: string
+  currentDay: number
+  dailySigns: { [day: number]: string[] }
+  completed: boolean
+}
+
 export default function Home() {
+  const searchParams = useSearchParams()
   const [currentScreen, setCurrentScreen] = useState<Screen>('home')
   const [selectedPath, setSelectedPath] = useState<PathType>(null)
   const [userQuestion, setUserQuestion] = useState('')
@@ -110,6 +122,52 @@ export default function Home() {
   const [reading, setReading] = useState({ text: '', verdict: '' })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deepJourney, setDeepJourney] = useState<DeepJourneyData | null>(null)
+  const [hasPaid, setHasPaid] = useState(false)
+
+  // Check for payment return and load saved journey
+  useEffect(() => {
+    // Check if returning from payment
+    const paid = searchParams.get('paid')
+    const savedQuestion = localStorage.getItem('theorakl_pending_question')
+    
+    if (paid === 'true' && savedQuestion) {
+      // They just paid - start their deep journey
+      const newJourney: DeepJourneyData = {
+        question: savedQuestion,
+        startDate: new Date().toISOString(),
+        currentDay: 1,
+        dailySigns: {},
+        completed: false
+      }
+      localStorage.setItem('theorakl_deep_journey', JSON.stringify(newJourney))
+      localStorage.removeItem('theorakl_pending_question')
+      setDeepJourney(newJourney)
+      setUserQuestion(savedQuestion)
+      setSelectedPath('deep')
+      setHasPaid(true)
+      setCurrentScreen('signs')
+      
+      // Clean up URL
+      window.history.replaceState({}, '', '/')
+    } else {
+      // Check for existing journey
+      const savedJourney = localStorage.getItem('theorakl_deep_journey')
+      if (savedJourney) {
+        const journey = JSON.parse(savedJourney) as DeepJourneyData
+        
+        // Calculate current day based on start date
+        const startDate = new Date(journey.startDate)
+        const today = new Date()
+        const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        journey.currentDay = Math.min(daysDiff, 5)
+        
+        setDeepJourney(journey)
+        setUserQuestion(journey.question)
+        setHasPaid(true)
+      }
+    }
+  }, [searchParams])
 
   // Generate stars on mount
   useEffect(() => {
@@ -145,6 +203,14 @@ export default function Home() {
 
   const goToSigns = () => {
     if (!selectedPath) return
+    
+    if (selectedPath === 'deep' && !hasPaid) {
+      // Save question and redirect to Stripe
+      localStorage.setItem('theorakl_pending_question', userQuestion)
+      window.location.href = STRIPE_PAYMENT_LINK
+      return
+    }
+    
     showScreen('signs')
   }
 
@@ -173,9 +239,90 @@ export default function Home() {
     }
   }
 
+  const saveDaySigns = () => {
+    if (!deepJourney || selectedSigns.length === 0) {
+      alert('Please log at least one sign')
+      return
+    }
+
+    const updatedJourney = {
+      ...deepJourney,
+      dailySigns: {
+        ...deepJourney.dailySigns,
+        [deepJourney.currentDay]: selectedSigns
+      }
+    }
+
+    localStorage.setItem('theorakl_deep_journey', JSON.stringify(updatedJourney))
+    setDeepJourney(updatedJourney)
+
+    if (deepJourney.currentDay >= 5) {
+      // Day 5 - generate final reading
+      generateDeepReading(updatedJourney)
+    } else {
+      // Show confirmation and tell them to come back tomorrow
+      showScreen('deep-journey')
+    }
+  }
+
+  const generateDeepReading = async (journey: DeepJourneyData) => {
+    setIsLoading(true)
+    setError(null)
+    showScreen('loading')
+
+    // Collect all signs from all days
+    const allSigns = Object.values(journey.dailySigns).flat()
+
+    try {
+      const response = await fetch('/api/reading', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: journey.question,
+          signs: allSigns,
+          pathType: 'deep',
+          isDeepReading: true,
+          dayCount: 5
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to generate reading')
+      }
+
+      const data = await response.json()
+      
+      setReading({
+        text: data.reading,
+        verdict: data.verdict
+      })
+
+      // Mark journey as completed
+      const completedJourney = { ...journey, completed: true }
+      localStorage.setItem('theorakl_deep_journey', JSON.stringify(completedJourney))
+      setDeepJourney(completedJourney)
+
+      showScreen('reading')
+    } catch (err) {
+      console.error('Error:', err)
+      setError('Something went wrong. Please try again.')
+      showScreen('signs')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const generateReading = async () => {
     if (selectedSigns.length === 0) {
       alert('Please log at least one sign')
+      return
+    }
+
+    // If this is a deep journey, save the day instead
+    if (selectedPath === 'deep' && deepJourney) {
+      saveDaySigns()
       return
     }
 
@@ -228,11 +375,39 @@ export default function Home() {
     showScreen('home')
   }
 
+  const continueJourney = () => {
+    if (deepJourney) {
+      setSelectedPath('deep')
+      setUserQuestion(deepJourney.question)
+      setSelectedSigns([])
+      showScreen('signs')
+    }
+  }
+
+  const startNewJourney = () => {
+    localStorage.removeItem('theorakl_deep_journey')
+    setDeepJourney(null)
+    setHasPaid(false)
+    resetApp()
+  }
+
   // Format reading text with paragraphs
   const formatReading = (text: string) => {
     return text.split('\n\n').map((paragraph, i) => (
       <p key={i}>{paragraph}</p>
     ))
+  }
+
+  // Get total signs logged in deep journey
+  const getTotalSignsLogged = () => {
+    if (!deepJourney) return 0
+    return Object.values(deepJourney.dailySigns).flat().length
+  }
+
+  // Check if today's signs are already logged
+  const todayAlreadyLogged = () => {
+    if (!deepJourney) return false
+    return !!deepJourney.dailySigns[deepJourney.currentDay]
   }
 
   return (
@@ -258,8 +433,27 @@ export default function Home() {
             Learn to see them. Let them guide you.
           </p>
 
+          {/* Show continue button if there's an active journey */}
+          {deepJourney && !deepJourney.completed && (
+            <div className="card" style={{ marginBottom: '20px', borderColor: 'var(--accent-gold)' }}>
+              <h3 className="card-title">Your Journey Continues</h3>
+              <p className="card-subtitle">
+                Day {deepJourney.currentDay} of 5 — {getTotalSignsLogged()} signs logged so far
+              </p>
+              {todayAlreadyLogged() ? (
+                <p style={{ color: 'var(--accent-gold)', fontSize: '13px' }}>
+                  ✓ Today&apos;s signs logged. Return tomorrow for Day {Math.min(deepJourney.currentDay + 1, 5)}.
+                </p>
+              ) : (
+                <button className="btn btn-primary" onClick={continueJourney} style={{ marginTop: '12px' }}>
+                  Log Today&apos;s Signs
+                </button>
+              )}
+            </div>
+          )}
+
           <button className="btn btn-primary" onClick={() => showScreen('question')}>
-            Begin Your Reading
+            {deepJourney && !deepJourney.completed ? 'Start New Reading' : 'Begin Your Reading'}
           </button>
 
           <button className="btn btn-secondary mt-20" onClick={() => showScreen('about')}>
@@ -323,7 +517,7 @@ Is now the right time to..."
             onClick={goToSigns} 
             disabled={!selectedPath}
           >
-            Continue
+            {selectedPath === 'deep' && !hasPaid ? 'Continue to Payment' : 'Continue'}
           </button>
         </div>
 
@@ -331,15 +525,19 @@ Is now the right time to..."
         <div className={`screen ${currentScreen === 'signs' ? 'active' : ''}`}>
           <button className="back-btn" onClick={() => showScreen('path')}>← Back</button>
           
-          {selectedPath === 'deep' && (
+          {selectedPath === 'deep' && deepJourney && (
             <div className="progress-container">
-              <p className="progress-label">Day 1 of 5</p>
+              <p className="progress-label">Day {deepJourney.currentDay} of 5</p>
               <div className="progress-dots">
-                <div className="progress-dot current"></div>
-                <div className="progress-dot"></div>
-                <div className="progress-dot"></div>
-                <div className="progress-dot"></div>
-                <div className="progress-dot"></div>
+                {[1, 2, 3, 4, 5].map(day => (
+                  <div 
+                    key={day}
+                    className={`progress-dot ${
+                      day < deepJourney.currentDay ? 'completed' : 
+                      day === deepJourney.currentDay ? 'current' : ''
+                    }`}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -363,7 +561,7 @@ Is now the right time to..."
 
           {/* Selected signs summary */}
           <div className="selected-signs-summary">
-            <p className="summary-title">Signs Logged</p>
+            <p className="summary-title">Signs Logged Today</p>
             <div className="summary-tags">
               {selectedSigns.length === 0 ? (
                 <span className="summary-empty">No signs selected yet</span>
@@ -436,8 +634,62 @@ Is now the right time to..."
           </div>
 
           <button className="btn btn-primary mt-30" onClick={generateReading}>
-            Reveal My Reading
+            {selectedPath === 'deep' && deepJourney && deepJourney.currentDay < 5 
+              ? 'Save Today\'s Signs' 
+              : 'Reveal My Reading'}
           </button>
+        </div>
+
+        {/* Deep Journey Progress Screen */}
+        <div className={`screen ${currentScreen === 'deep-journey' ? 'active' : ''}`}>
+          <div className="header">
+            <h1 className="logo">THE<span>O</span>RAKL</h1>
+          </div>
+
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <div style={{ 
+              fontSize: '48px', 
+              marginBottom: '20px',
+              color: 'var(--accent-gold)'
+            }}>✓</div>
+            <h2 className="page-title" style={{ marginBottom: '16px' }}>Day {deepJourney?.currentDay} Complete</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '30px', lineHeight: '1.6' }}>
+              Your signs have been recorded.<br />
+              The universe is weaving your answer.
+            </p>
+
+            {deepJourney && (
+              <div className="progress-container" style={{ marginBottom: '30px' }}>
+                <div className="progress-dots">
+                  {[1, 2, 3, 4, 5].map(day => (
+                    <div 
+                      key={day}
+                      className={`progress-dot ${
+                        day <= deepJourney.currentDay ? 'completed' : ''
+                      }`}
+                    />
+                  ))}
+                </div>
+                <p style={{ 
+                  color: 'var(--text-secondary)', 
+                  fontSize: '13px', 
+                  marginTop: '12px' 
+                }}>
+                  {5 - deepJourney.currentDay} days remaining
+                </p>
+              </div>
+            )}
+
+            <div className="card">
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: '1.6' }}>
+                Return tomorrow to log more signs. On Day 5, you&apos;ll receive your complete reading based on everything the universe has shown you.
+              </p>
+            </div>
+
+            <button className="btn btn-secondary mt-30" onClick={() => showScreen('home')}>
+              Return Home
+            </button>
+          </div>
         </div>
 
         {/* Loading Screen */}
@@ -450,15 +702,20 @@ Is now the right time to..."
 
         {/* Reading Screen */}
         <div className={`screen ${currentScreen === 'reading' ? 'active' : ''}`}>
-          <button className="back-btn" onClick={resetApp}>← New Reading</button>
+          <button className="back-btn" onClick={startNewJourney}>← New Reading</button>
           
           <div className="reading-container">
             <p className="reading-question">&ldquo;{userQuestion}&rdquo;</p>
             
             <div className="reading-signs">
-              {selectedSigns.map((sign, i) => (
-                <span key={i} className="reading-sign-tag">{sign}</span>
-              ))}
+              {selectedPath === 'deep' && deepJourney 
+                ? Object.values(deepJourney.dailySigns).flat().map((sign, i) => (
+                    <span key={i} className="reading-sign-tag">{sign}</span>
+                  ))
+                : selectedSigns.map((sign, i) => (
+                    <span key={i} className="reading-sign-tag">{sign}</span>
+                  ))
+              }
             </div>
 
             <div className="divider">
@@ -477,7 +734,7 @@ Is now the right time to..."
             </div>
           </div>
 
-          <button className="btn btn-secondary mt-30" onClick={resetApp}>
+          <button className="btn btn-secondary mt-30" onClick={startNewJourney}>
             Ask Another Question
           </button>
         </div>
