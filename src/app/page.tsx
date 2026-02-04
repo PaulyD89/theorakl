@@ -3,8 +3,8 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-// Sign categories data
-const signCategories = [
+// Basic sign categories (available to all)
+const basicSignCategories = [
   {
     id: 'numbers',
     icon: '✧',
@@ -97,6 +97,155 @@ const signCategories = [
   }
 ]
 
+// Premium sign categories (only for paid users)
+const premiumSignCategories = [
+  {
+    id: 'angel-numbers',
+    icon: '𓂀',
+    title: 'Angel Numbers',
+    premium: true,
+    signs: [
+      '111 — New beginnings, manifestation',
+      '222 — Balance, trust, divine timing',
+      '333 — Spiritual support, creativity',
+      '444 — Angels are near, protection',
+      '555 — Major change coming',
+      '666 — Refocus on what matters',
+      '777 — Spiritual awakening, luck',
+      '888 — Abundance flowing to you',
+      '999 — Completion, chapter ending',
+      '1111 — Portal opening, make a wish',
+      '1234 — Steps aligning, keep going'
+    ]
+  },
+  {
+    id: 'spirit-messages',
+    icon: '🪶',
+    title: 'Messages from Spirit',
+    premium: true,
+    signs: [
+      'Found a feather in unusual place',
+      'Found a penny or dime',
+      'Smelled a familiar scent (perfume, tobacco, etc.)',
+      'Felt a presence nearby',
+      'Felt sudden warmth or cold spot',
+      'Electronics glitched unexpectedly',
+      'Saw their favorite bird or animal',
+      'Heard their favorite song randomly',
+      'Clock stopped at meaningful time',
+      'Object moved on its own'
+    ]
+  },
+  {
+    id: 'dreams',
+    icon: '☾',
+    title: 'Dreams & Visions',
+    premium: true,
+    signs: [
+      'Prophetic dream that felt real',
+      'Recurring dream theme',
+      'Visited by deceased loved one in dream',
+      'Received a message in dream',
+      'Woke up with sudden clarity',
+      'Dream about flying or floating',
+      'Dream about water (ocean, river, rain)',
+      'Dream about snakes or transformation',
+      'Lucid dream experience',
+      'Nightmare that felt like a warning'
+    ]
+  },
+  {
+    id: 'synchronicity',
+    icon: '∞',
+    title: 'Deep Synchronicities',
+    premium: true,
+    signs: [
+      'Thought of someone, they called/texted',
+      'Same theme appeared 3+ times today',
+      'Right person appeared at right moment',
+      'Answer came through unexpected source',
+      'Received exactly what I needed',
+      'Events aligned too perfectly to be chance',
+      'Heard the exact words I needed to hear',
+      'Found something I had been looking for',
+      'Missed something that turned out to be a blessing',
+      'Perfect timing saved me from something'
+    ]
+  },
+  {
+    id: 'animals-deep',
+    icon: '🦋',
+    title: 'Animal Messengers',
+    premium: true,
+    signs: [
+      'Cardinal appeared (loved one visiting)',
+      'Hawk or eagle flew overhead',
+      'Owl sighting or heard owl',
+      'Dragonfly crossed my path',
+      'Spider appeared repeatedly',
+      'Snake crossed my path',
+      'Deer made eye contact with me',
+      'Crow or raven appeared',
+      'White animal sighting',
+      'Unusual animal behaved strangely'
+    ]
+  },
+  {
+    id: 'physical',
+    icon: '✋',
+    title: 'Physical Sensations',
+    premium: true,
+    signs: [
+      'Third eye pressure or tingling',
+      'Heart fluttering or expanding feeling',
+      'Ears ringing at specific frequency',
+      'Tingling on crown of head',
+      'Sudden rush of energy up spine',
+      'Felt pulled in a direction',
+      'Hands felt hot or tingly',
+      'Stomach dropped (intuition warning)',
+      'Full-body shivers of truth',
+      'Felt frozen in place momentarily'
+    ]
+  },
+  {
+    id: 'timing',
+    icon: '⏰',
+    title: 'Divine Timing',
+    premium: true,
+    signs: [
+      'Looked at clock at exact meaningful time',
+      'Something happened on anniversary date',
+      'Event occurred at birth time',
+      'Delay that turned into protection',
+      'Arrived at the perfect moment',
+      'Almost missed something important',
+      'Woke up at 3am or 4am',
+      'Transaction total was meaningful number',
+      'Timer/alarm went off unexpectedly',
+      'Everything aligned in sequence'
+    ]
+  },
+  {
+    id: 'nature-deep',
+    icon: '🌸',
+    title: 'Nature Signs',
+    premium: true,
+    signs: [
+      'Found a four-leaf clover',
+      'Double rainbow appeared',
+      'Lightning without rain',
+      'Unusual cloud formation',
+      'Flower bloomed out of season',
+      'Leaf or petal landed on me',
+      'Saw shooting star',
+      'Moon felt unusually powerful',
+      'Sunrise/sunset was breathtaking',
+      'Storm cleared suddenly'
+    ]
+  }
+]
+
 const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/00wdR9cm8atWbQ2d3Cew802'
 
 type Screen = 'home' | 'question' | 'path' | 'signs' | 'loading' | 'reading' | 'about' | 'deep-journey'
@@ -127,12 +276,10 @@ function TheoraklApp() {
 
   // Check for payment return and load saved journey
   useEffect(() => {
-    // Check if returning from payment
     const paid = searchParams.get('paid')
     const savedQuestion = localStorage.getItem('theorakl_pending_question')
     
     if (paid === 'true' && savedQuestion) {
-      // They just paid - start their deep journey
       const newJourney: DeepJourneyData = {
         question: savedQuestion,
         startDate: new Date().toISOString(),
@@ -147,21 +294,15 @@ function TheoraklApp() {
       setSelectedPath('deep')
       setHasPaid(true)
       setCurrentScreen('signs')
-      
-      // Clean up URL
       window.history.replaceState({}, '', '/')
     } else {
-      // Check for existing journey
       const savedJourney = localStorage.getItem('theorakl_deep_journey')
       if (savedJourney) {
         const journey = JSON.parse(savedJourney) as DeepJourneyData
-        
-        // Calculate current day based on start date
         const startDate = new Date(journey.startDate)
         const today = new Date()
         const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
         journey.currentDay = Math.min(daysDiff, 5)
-        
         setDeepJourney(journey)
         setUserQuestion(journey.question)
         setHasPaid(true)
@@ -205,7 +346,6 @@ function TheoraklApp() {
     if (!selectedPath) return
     
     if (selectedPath === 'deep' && !hasPaid) {
-      // Save question and redirect to Stripe
       localStorage.setItem('theorakl_pending_question', userQuestion)
       window.location.href = STRIPE_PAYMENT_LINK
       return
@@ -222,7 +362,10 @@ function TheoraklApp() {
     )
   }
 
-  const toggleSign = (signText: string) => {
+  const toggleSign = (signText: string, isPremium: boolean = false) => {
+    if (isPremium && selectedPath !== 'deep') {
+      return // Don't allow selecting premium signs on free tier
+    }
     setSelectedSigns(prev =>
       prev.includes(signText)
         ? prev.filter(s => s !== signText)
@@ -257,10 +400,8 @@ function TheoraklApp() {
     setDeepJourney(updatedJourney)
 
     if (deepJourney.currentDay >= 5) {
-      // Day 5 - generate final reading
       generateDeepReading(updatedJourney)
     } else {
-      // Show confirmation and tell them to come back tomorrow
       showScreen('deep-journey')
     }
   }
@@ -270,15 +411,12 @@ function TheoraklApp() {
     setError(null)
     showScreen('loading')
 
-    // Collect all signs from all days
     const allSigns = Object.values(journey.dailySigns).flat()
 
     try {
       const response = await fetch('/api/reading', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: journey.question,
           signs: allSigns,
@@ -288,18 +426,11 @@ function TheoraklApp() {
         })
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to generate reading')
-      }
+      if (!response.ok) throw new Error('Failed to generate reading')
 
       const data = await response.json()
-      
-      setReading({
-        text: data.reading,
-        verdict: data.verdict
-      })
+      setReading({ text: data.reading, verdict: data.verdict })
 
-      // Mark journey as completed
       const completedJourney = { ...journey, completed: true }
       localStorage.setItem('theorakl_deep_journey', JSON.stringify(completedJourney))
       setDeepJourney(completedJourney)
@@ -320,7 +451,6 @@ function TheoraklApp() {
       return
     }
 
-    // If this is a deep journey, save the day instead
     if (selectedPath === 'deep' && deepJourney) {
       saveDaySigns()
       return
@@ -333,9 +463,7 @@ function TheoraklApp() {
     try {
       const response = await fetch('/api/reading', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: userQuestion,
           signs: selectedSigns,
@@ -343,16 +471,10 @@ function TheoraklApp() {
         })
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to generate reading')
-      }
+      if (!response.ok) throw new Error('Failed to generate reading')
 
       const data = await response.json()
-      
-      setReading({
-        text: data.reading,
-        verdict: data.verdict
-      })
+      setReading({ text: data.reading, verdict: data.verdict })
       showScreen('reading')
     } catch (err) {
       console.error('Error:', err)
@@ -391,24 +513,23 @@ function TheoraklApp() {
     resetApp()
   }
 
-  // Format reading text with paragraphs
   const formatReading = (text: string) => {
     return text.split('\n\n').map((paragraph, i) => (
       <p key={i}>{paragraph}</p>
     ))
   }
 
-  // Get total signs logged in deep journey
   const getTotalSignsLogged = () => {
     if (!deepJourney) return 0
     return Object.values(deepJourney.dailySigns).flat().length
   }
 
-  // Check if today's signs are already logged
   const todayAlreadyLogged = () => {
     if (!deepJourney) return false
     return !!deepJourney.dailySigns[deepJourney.currentDay]
   }
+
+  const isPremiumUnlocked = selectedPath === 'deep'
 
   return (
     <>
@@ -433,7 +554,6 @@ function TheoraklApp() {
             Learn to see them. Let them guide you.
           </p>
 
-          {/* Show continue button if there's an active journey */}
           {deepJourney && !deepJourney.completed && (
             <div className="card" style={{ marginBottom: '20px', borderColor: 'var(--accent-gold)' }}>
               <h3 className="card-title">Your Journey Continues</h3>
@@ -508,8 +628,8 @@ Is now the right time to..."
             onClick={() => selectPath('deep')}
           >
             <h3 className="card-title">Deep Reading</h3>
-            <p className="card-subtitle">Commit to 5 days of sign tracking. The longer you observe, the clearer your answer becomes.</p>
-            <span className="card-price">$4.99</span>
+            <p className="card-subtitle">Commit to 5 days of sign tracking. Unlock 8 additional sign categories including Angel Numbers, Spirit Messages, and Dreams.</p>
+            <span className="card-price">$2.99</span>
           </div>
 
           {selectedPath === 'deep' && !hasPaid && (
@@ -519,16 +639,22 @@ Is now the right time to..."
               borderColor: 'var(--accent-gold)'
             }}>
               <p style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: '1.6', marginBottom: '12px' }}>
-                <strong>Your 5-Day Journey:</strong>
+                <strong>Your 5-Day Journey Includes:</strong>
               </p>
               <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' }}>
-                • Return each day to log the signs you notice
+                ✦ 8 premium sign categories unlocked
               </p>
               <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' }}>
-                • The universe reveals more as you pay attention
+                ✦ Angel Numbers with specific meanings
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' }}>
+                ✦ Messages from Spirit & deceased loved ones
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' }}>
+                ✦ Dreams, Visions & Premonitions
               </p>
               <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
-                • On Day 5, receive your complete reading
+                ✦ Deeper, more personalized final reading
               </p>
             </div>
           )}
@@ -538,7 +664,7 @@ Is now the right time to..."
             onClick={goToSigns} 
             disabled={!selectedPath}
           >
-            {selectedPath === 'deep' && !hasPaid ? 'Continue to Payment — $4.99' : 'Continue'}
+            {selectedPath === 'deep' && !hasPaid ? 'Continue to Payment — $2.99' : 'Continue'}
           </button>
         </div>
 
@@ -594,8 +720,8 @@ Is now the right time to..."
             </div>
           </div>
 
-          {/* Sign Categories */}
-          {signCategories.map(category => (
+          {/* Basic Sign Categories */}
+          {basicSignCategories.map(category => (
             <div key={category.id} className="sign-category">
               <div 
                 className={`category-header ${expandedCategories.includes(category.id) ? 'expanded' : ''}`}
@@ -616,6 +742,63 @@ Is now the right time to..."
                     <span className="sign-text">{sign}</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Premium Sign Categories */}
+          {premiumSignCategories.map(category => (
+            <div key={category.id} className="sign-category">
+              <div 
+                className={`category-header ${expandedCategories.includes(category.id) ? 'expanded' : ''} ${!isPremiumUnlocked ? 'locked' : ''}`}
+                onClick={() => toggleCategory(category.id)}
+                style={!isPremiumUnlocked ? { opacity: 0.6 } : {}}
+              >
+                <span className="category-icon">{category.icon}</span>
+                <span className="category-title">
+                  {category.title}
+                  {!isPremiumUnlocked && (
+                    <span style={{ 
+                      marginLeft: '8px', 
+                      fontSize: '10px', 
+                      background: 'var(--accent-gold)', 
+                      color: 'var(--bg-deep)',
+                      padding: '2px 6px',
+                      borderRadius: '3px',
+                      verticalAlign: 'middle'
+                    }}>
+                      DEEP
+                    </span>
+                  )}
+                </span>
+                <span className="category-expand">▼</span>
+              </div>
+              <div className={`sign-options ${expandedCategories.includes(category.id) ? 'expanded' : ''}`}>
+                {category.signs.map((sign, i) => (
+                  <div 
+                    key={i}
+                    className={`sign-option ${selectedSigns.includes(sign) ? 'checked' : ''} ${!isPremiumUnlocked ? 'locked' : ''}`}
+                    onClick={() => toggleSign(sign, true)}
+                    style={!isPremiumUnlocked ? { 
+                      opacity: 0.4, 
+                      cursor: 'not-allowed',
+                      pointerEvents: 'none'
+                    } : {}}
+                  >
+                    <span className="sign-checkbox"></span>
+                    <span className="sign-text">{sign}</span>
+                  </div>
+                ))}
+                {!isPremiumUnlocked && (
+                  <p style={{ 
+                    fontSize: '12px', 
+                    color: 'var(--accent-gold)', 
+                    marginTop: '8px',
+                    fontStyle: 'italic'
+                  }}>
+                    Unlock with Deep Reading ($2.99)
+                  </p>
+                )}
               </div>
             </div>
           ))}
