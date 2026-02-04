@@ -57,8 +57,7 @@ const basicSignCategories = [
       'Strong gut feeling',
       'Chills or goosebumps',
       'Sudden emotion out of nowhere',
-      'Déjà vu',
-      'Vivid dream I remembered'
+      'Déjà vu'
     ]
   },
   {
@@ -93,6 +92,18 @@ const basicSignCategories = [
       'Rainbow appeared',
       'Sun broke through clouds',
       'Wind picked up suddenly'
+    ]
+  },
+  {
+    id: 'dreams-basic',
+    icon: '☾',
+    title: 'Dreams',
+    signs: [
+      'Vivid dream I remembered',
+      'Recurring dream theme',
+      'Woke up with a strong feeling',
+      'Dream about someone I know',
+      'Dream that felt meaningful'
     ]
   }
 ]
@@ -137,21 +148,26 @@ const premiumSignCategories = [
     ]
   },
   {
-    id: 'dreams',
-    icon: '☾',
-    title: 'Dreams & Visions',
+    id: 'dreams-advanced',
+    icon: '🌙',
+    title: 'Advanced Dreams & Visions',
     premium: true,
     signs: [
-      'Prophetic dream that felt real',
-      'Recurring dream theme',
+      'Prophetic dream that came true',
       'Visited by deceased loved one in dream',
-      'Received a message in dream',
-      'Woke up with sudden clarity',
+      'Received a specific message in dream',
+      'Lucid dream where I had control',
       'Dream about flying or floating',
       'Dream about water (ocean, river, rain)',
       'Dream about snakes or transformation',
-      'Lucid dream experience',
-      'Nightmare that felt like a warning'
+      'Dream about death or rebirth',
+      'Dream with a spirit guide or angel',
+      'Nightmare that felt like a warning',
+      'Woke up crying from emotional dream',
+      'Dream revealed a hidden truth',
+      'Sleep paralysis experience',
+      'Dream within a dream',
+      'Shared dream with someone else'
     ]
   },
   {
