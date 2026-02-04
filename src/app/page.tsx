@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 // Sign categories data
@@ -110,7 +110,7 @@ interface DeepJourneyData {
   completed: boolean
 }
 
-export default function Home() {
+function TheoraklApp() {
   const searchParams = useSearchParams()
   const [currentScreen, setCurrentScreen] = useState<Screen>('home')
   const [selectedPath, setSelectedPath] = useState<PathType>(null)
@@ -512,12 +512,33 @@ Is now the right time to..."
             <span className="card-price">$4.99</span>
           </div>
 
+          {selectedPath === 'deep' && !hasPaid && (
+            <div className="card" style={{ 
+              marginTop: '20px', 
+              background: 'rgba(201, 165, 92, 0.1)',
+              borderColor: 'var(--accent-gold)'
+            }}>
+              <p style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: '1.6', marginBottom: '12px' }}>
+                <strong>Your 5-Day Journey:</strong>
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' }}>
+                • Return each day to log the signs you notice
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6', marginBottom: '8px' }}>
+                • The universe reveals more as you pay attention
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                • On Day 5, receive your complete reading
+              </p>
+            </div>
+          )}
+
           <button 
             className="btn btn-primary mt-30" 
             onClick={goToSigns} 
             disabled={!selectedPath}
           >
-            {selectedPath === 'deep' && !hasPaid ? 'Continue to Payment' : 'Continue'}
+            {selectedPath === 'deep' && !hasPaid ? 'Continue to Payment — $4.99' : 'Continue'}
           </button>
         </div>
 
@@ -635,7 +656,7 @@ Is now the right time to..."
 
           <button className="btn btn-primary mt-30" onClick={generateReading}>
             {selectedPath === 'deep' && deepJourney && deepJourney.currentDay < 5 
-              ? 'Save Today\'s Signs' 
+              ? "Save Today's Signs" 
               : 'Reveal My Reading'}
           </button>
         </div>
@@ -766,5 +787,20 @@ Is now the right time to..."
         </div>
       </div>
     </>
+  )
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="app-container">
+        <div className="loading">
+          <div className="loading-orb"></div>
+          <p className="loading-text">Loading...</p>
+        </div>
+      </div>
+    }>
+      <TheoraklApp />
+    </Suspense>
   )
 }
