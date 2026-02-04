@@ -479,6 +479,93 @@ Get your own reading at theorakl.com`
     window.location.href = `mailto:?subject=${subject}&body=${body}`
   }
 
+  const downloadShareCard = async () => {
+    if (!journey) return
+    const cardUrl = `/api/share-card?question=${encodeURIComponent(journey.question)}&verdict=${encodeURIComponent(reading.verdict)}`
+    
+    try {
+      const response = await fetch(cardUrl)
+      const svgText = await response.text()
+      
+      const canvas = document.createElement('canvas')
+      canvas.width = 1080
+      canvas.height = 1920
+      const ctx = canvas.getContext('2d')
+      
+      const img = new Image()
+      const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(svgBlob)
+      
+      img.onload = () => {
+        ctx?.drawImage(img, 0, 0)
+        URL.revokeObjectURL(url)
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const downloadUrl = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = downloadUrl
+            a.download = 'my-theorakl-reading.png'
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            URL.revokeObjectURL(downloadUrl)
+          }
+        }, 'image/png')
+      }
+      
+      img.src = url
+    } catch (error) {
+      console.error('Error generating share card:', error)
+    }
+  }
+
+  const shareCardToSocial = async () => {
+    if (!journey) return
+    const cardUrl = `/api/share-card?question=${encodeURIComponent(journey.question)}&verdict=${encodeURIComponent(reading.verdict)}`
+    
+    try {
+      const response = await fetch(cardUrl)
+      const svgText = await response.text()
+      
+      const canvas = document.createElement('canvas')
+      canvas.width = 1080
+      canvas.height = 1920
+      const ctx = canvas.getContext('2d')
+      
+      const img = new Image()
+      const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' })
+      const url = URL.createObjectURL(svgBlob)
+      
+      img.onload = async () => {
+        ctx?.drawImage(img, 0, 0)
+        URL.revokeObjectURL(url)
+        
+        canvas.toBlob(async (blob) => {
+          if (blob && navigator.share) {
+            const file = new File([blob], 'my-theorakl-reading.png', { type: 'image/png' })
+            try {
+              await navigator.share({
+                title: 'My Theorakl Reading',
+                text: `The universe answered my question: "${reading.verdict}" ✨ Ask yours at theorakl.com`,
+                files: [file]
+              })
+            } catch {
+              downloadShareCard()
+            }
+          } else {
+            downloadShareCard()
+          }
+        }, 'image/png')
+      }
+      
+      img.src = url
+    } catch (error) {
+      console.error('Error:', error)
+      downloadShareCard()
+    }
+  }
+
   const getTotalSignsLogged = () => {
     if (!journey) return 0
     return Object.values(journey.daily_signs).flat().length
@@ -747,6 +834,16 @@ Get your own reading at theorakl.com`
               {copySuccess && (
                 <p className="copy-success">✓ Copied to clipboard</p>
               )}
+            </div>
+
+            {/* Share Card for Social */}
+            <div className="share-card-section">
+              <p className="share-label">Share on Social</p>
+              <button className="btn btn-secondary share-card-btn" onClick={shareCardToSocial}>
+                <span style={{ marginRight: '10px' }}>✨</span>
+                Download Story Card
+              </button>
+              <p className="share-card-hint">Perfect for Instagram & TikTok stories</p>
             </div>
 
             <button className="btn btn-secondary mt-30" onClick={() => router.push('/')}>
