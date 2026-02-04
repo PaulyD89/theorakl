@@ -1070,8 +1070,6 @@ html {
   padding-top: 30px;
   border-top: 1px solid var(--border-subtle);
   text-align: center;
-  opacity: 0;
-  animation: fadeInUp 0.6s var(--ease-out-expo) 1.4s forwards;
 }
 
 .share-card-btn {
