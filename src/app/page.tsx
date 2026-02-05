@@ -294,6 +294,7 @@ function TheoraklApp() {
   const [journeyId, setJourneyId] = useState<string | null>(null)
   const [sendingEmail, setSendingEmail] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState('The universe is speaking...')
+  const [showInstallModal, setShowInstallModal] = useState(false)
 
   const loadingMessages = [
     'The universe is speaking...',
@@ -870,12 +871,24 @@ Get your own reading at theorakl.com`
             How It Works
           </button>
 
-          <button 
-            className="about-link"
-            onClick={() => window.location.href = '/about'}
-          >
-            About & FAQ
-          </button>
+          {/* Footer Links */}
+          <div className="home-footer">
+            <button 
+              className="footer-link"
+              onClick={() => window.location.href = '/about'}
+            >
+              About & FAQ
+            </button>
+            <span className="footer-divider">·</span>
+            <button 
+              className="footer-link"
+              onClick={() => setShowInstallModal(true)}
+            >
+              Get the App
+            </button>
+          </div>
+
+          <p className="copyright">© 2026 The Orakl</p>
         </div>
 
         {/* Question Screen */}
@@ -1364,6 +1377,42 @@ Is now the right time to..."
           </button>
         </div>
       </div>
+
+      {/* Install App Modal */}
+      {showInstallModal && (
+        <div className="modal-overlay" onClick={() => setShowInstallModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowInstallModal(false)}>×</button>
+            
+            <h2 className="modal-title">Add to Home Screen</h2>
+            <p className="modal-subtitle">Get the full app experience</p>
+
+            <div className="install-instructions">
+              <div className="install-section">
+                <h3>📱 iPhone / iPad</h3>
+                <ol>
+                  <li>Tap the <strong>Share</strong> button <span className="icon-hint">(□↑)</span> at the bottom of Safari</li>
+                  <li>Scroll down and tap <strong>&quot;Add to Home Screen&quot;</strong></li>
+                  <li>Tap <strong>&quot;Add&quot;</strong> in the top right</li>
+                </ol>
+              </div>
+
+              <div className="install-section">
+                <h3>🤖 Android</h3>
+                <ol>
+                  <li>Tap the <strong>menu</strong> button <span className="icon-hint">(⋮)</span> in Chrome</li>
+                  <li>Tap <strong>&quot;Add to Home screen&quot;</strong></li>
+                  <li>Tap <strong>&quot;Add&quot;</strong></li>
+                </ol>
+              </div>
+            </div>
+
+            <p className="install-note">
+              Once added, The Orakl will open like a native app — fullscreen, no browser bars.
+            </p>
+          </div>
+        </div>
+      )}
     </>
   )
 }

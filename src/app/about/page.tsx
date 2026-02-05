@@ -172,7 +172,7 @@ export default function AboutPage() {
             </button>
 
             <p className="about-footer">
-              © 2025 The Orakl. All rights reserved.
+              © 2026 The Orakl. All rights reserved.
             </p>
           </div>
         </div>
