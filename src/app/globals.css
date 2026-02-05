@@ -1285,3 +1285,20 @@ html {
     transform: translateY(0);
   }
 }
+
+/* Sign Highlight in Reading */
+.sign-highlight {
+  color: var(--accent-gold);
+  font-weight: 500;
+  text-shadow: 0 0 10px rgba(201, 165, 92, 0.3);
+}
+
+/* Reading Timestamp */
+.reading-timestamp {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 12px;
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+  opacity: 0.7;
+}

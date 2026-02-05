@@ -295,6 +295,7 @@ function TheoraklApp() {
   const [sendingEmail, setSendingEmail] = useState(false)
   const [loadingMessage, setLoadingMessage] = useState('The universe is speaking...')
   const [showInstallModal, setShowInstallModal] = useState(false)
+  const [readingTimestamp, setReadingTimestamp] = useState<Date | null>(null)
 
   const loadingMessages = [
     'The universe is speaking...',
@@ -471,6 +472,7 @@ function TheoraklApp() {
 
       const data = await response.json()
       setReading({ text: data.reading, verdict: data.verdict })
+      setReadingTimestamp(new Date())
 
       const completedJourney = { ...journey, completed: true }
       localStorage.setItem('theorakl_deep_journey', JSON.stringify(completedJourney))
@@ -525,6 +527,7 @@ function TheoraklApp() {
 
       const data = await response.json()
       setReading({ text: data.reading, verdict: data.verdict })
+      setReadingTimestamp(new Date())
       clearInterval(messageInterval)
       showScreen('reading')
     } catch (err) {
@@ -566,9 +569,69 @@ function TheoraklApp() {
   }
 
   const formatReading = (text: string) => {
-    return text.split('\n\n').map((paragraph, i) => (
-      <p key={i}>{paragraph}</p>
-    ))
+    // Get the signs to highlight
+    const signsToHighlight = selectedPath === 'deep' && deepJourney 
+      ? Object.values(deepJourney.dailySigns).flat()
+      : selectedSigns
+
+    // Create keywords from signs (extract meaningful words)
+    const keywords: string[] = []
+    signsToHighlight.forEach(sign => {
+      // Extract key terms from each sign
+      const terms = sign
+        .toLowerCase()
+        .replace(/[()—\-,]/g, ' ')
+        .split(' ')
+        .filter(word => word.length > 3)
+        .filter(word => !['with', 'from', 'that', 'this', 'were', 'been', 'have', 'into', 'about', 'felt', 'like'].includes(word))
+      keywords.push(...terms)
+    })
+    
+    // Also add specific patterns like numbers
+    signsToHighlight.forEach(sign => {
+      const numberMatch = sign.match(/\b(\d{3,4})\b/)
+      if (numberMatch) keywords.push(numberMatch[1])
+    })
+
+    // Remove duplicates
+    const uniqueKeywords = [...new Set(keywords)]
+
+    return text.split('\n\n').map((paragraph, i) => {
+      // Highlight keywords in the paragraph
+      let highlightedText = paragraph
+      
+      uniqueKeywords.forEach(keyword => {
+        const regex = new RegExp(`\\b(${keyword}s?|${keyword}ing|${keyword}ed|${keyword})\\b`, 'gi')
+        highlightedText = highlightedText.replace(regex, '{{HIGHLIGHT}}$1{{/HIGHLIGHT}}')
+      })
+
+      // Convert highlight markers to spans
+      const parts = highlightedText.split(/(\{\{HIGHLIGHT\}\}.*?\{\{\/HIGHLIGHT\}\})/g)
+      
+      return (
+        <p key={i}>
+          {parts.map((part, j) => {
+            if (part.startsWith('{{HIGHLIGHT}}')) {
+              const text = part.replace('{{HIGHLIGHT}}', '').replace('{{/HIGHLIGHT}}', '')
+              return <span key={j} className="sign-highlight">{text}</span>
+            }
+            return part
+          })}
+        </p>
+      )
+    })
+  }
+
+  const getTimeAgo = (date: Date | null): string => {
+    if (!date) return ''
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+    
+    if (seconds < 60) return 'just now'
+    if (seconds < 120) return '1 minute ago'
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`
+    if (seconds < 7200) return '1 hour ago'
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`
+    return 'today'
   }
 
   const getReadingText = () => {
@@ -1285,6 +1348,12 @@ Is now the right time to..."
           <button className="back-btn" onClick={startNewJourney}>← New Reading</button>
           
           <div className="reading-container">
+            {readingTimestamp && (
+              <p className="reading-timestamp">
+                ✧ Channeled {getTimeAgo(readingTimestamp)} ✧
+              </p>
+            )}
+            
             <p className="reading-question">&ldquo;{userQuestion}&rdquo;</p>
             
             <div className="reading-signs">
