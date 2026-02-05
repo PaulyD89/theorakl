@@ -295,7 +295,13 @@ export default function JourneyPage() {
         // Calculate current day based on start date
         const startDate = new Date(data.start_date)
         const today = new Date()
-        const daysDiff = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        
+        // Calculate days based on calendar dates, not hours elapsed
+        // This makes the day switch at midnight local time
+        const startDay = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate())
+        const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+        const daysDiff = Math.floor((todayDay.getTime() - startDay.getTime()) / (1000 * 60 * 60 * 24)) + 1
+        
         data.current_day = Math.min(daysDiff, 5)
         
         setJourney(data)
