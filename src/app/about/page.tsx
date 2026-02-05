@@ -120,21 +120,21 @@ export default function AboutPage() {
             <div style={{ marginBottom: '20px' }}>
               <h3 style={stepTitleStyle}>1. Ask your question.</h3>
               <p style={paragraphStyle}>
-                What decision is weighing on you? What do you need guidance on? Speak it clearly &#8212; the universe responds to clarity.
+                What&apos;s weighing on you? What do you need clarity on? Type your question &#8212; the universe is listening.
               </p>
             </div>
 
             <div style={{ marginBottom: '20px' }}>
               <h3 style={stepTitleStyle}>2. Log your signs.</h3>
               <p style={paragraphStyle}>
-                What have you noticed lately? Repeating numbers? Animal encounters? Songs that stopped you in your tracks? Dreams you can&apos;t shake? A gut feeling? We give you categories to choose from, or you can add your own.
+                Select the signs you&apos;ve noticed lately &#8212; repeating numbers, animal encounters, gut feelings, dreams, coincidences. Check all that apply.
               </p>
             </div>
 
             <div style={{ marginBottom: '20px' }}>
               <h3 style={stepTitleStyle}>3. Receive your reading.</h3>
               <p style={paragraphStyle}>
-                Our proprietary interpretation engine analyzes your specific signs &#8212; not generic horoscopes, but YOUR signs in the context of YOUR question. It finds patterns, detects meaningful combinations, and delivers a clear verdict.
+                We&apos;ll interpret your signs in the context of your question and reveal what the universe is telling you. The more signs you log, the clearer the message.
               </p>
             </div>
 

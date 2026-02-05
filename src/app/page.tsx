@@ -1428,17 +1428,17 @@ Is now the right time to..."
           
           <div className="card">
             <h3 className="card-title">1. Ask Your Question</h3>
-            <p className="card-subtitle">What decision weighs on you? What guidance do you seek? Speak it into the universe.</p>
+            <p className="card-subtitle">What&apos;s weighing on you? What do you need clarity on? Type your question—the universe is listening.</p>
           </div>
 
           <div className="card">
-            <h3 className="card-title">2. Notice the Signs</h3>
-            <p className="card-subtitle">The universe is always communicating—through numbers, animals, sounds, people, feelings. We help you see what&apos;s already there.</p>
+            <h3 className="card-title">2. Log Your Signs</h3>
+            <p className="card-subtitle">Select the signs you&apos;ve noticed lately—repeating numbers, animal encounters, gut feelings, dreams, coincidences. Check all that apply.</p>
           </div>
 
           <div className="card">
             <h3 className="card-title">3. Receive Your Reading</h3>
-            <p className="card-subtitle">We interpret the signs you&apos;ve logged and reveal the message meant for you. The more you notice, the clearer the answer.</p>
+            <p className="card-subtitle">We&apos;ll interpret your signs in the context of your question and reveal what the universe is telling you. The more signs you log, the clearer the message.</p>
           </div>
 
           <button className="btn btn-primary mt-20" onClick={() => showScreen('question')}>
